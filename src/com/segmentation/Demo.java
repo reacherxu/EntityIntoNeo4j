@@ -16,11 +16,11 @@ public class Demo {
             return;
         }
                 
-//        String sInput = "再审申请人（一审被告、二审上诉人）：李连达";
+        String sInput = "再审申请人（一审被告、二审上诉人）：李连达";
 
         try {
-//            resultString = instance.NLPIR_ParagraphProcess(sInput, 1);
-//            System.out.println("分词结果为：\n " + resultString);
+            resultString = instance.NLPIR_ParagraphProcess(sInput, 1);
+            System.out.println("分词结果为：\n " + resultString);
             
             //文件分词的输入和输出
 //            String utf8File = "test/18届三中全会.TXT";

@@ -1,10 +1,10 @@
 package com.neo4j;
 
 
-import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import com.util.Util;
 
@@ -39,8 +39,8 @@ public class BaseDao {
 	public static void main(String[] args) {
 		//"114.212.83.134:7474"  "172.26.13.122:7474"
 		BaseDao ins = new BaseDao();
-		
-		System.out.println(ins.hasNode("辛州", Entity.Lawyer));
+		ins.recommendLawyer("郭明");
+//		System.out.println(ins.getDirectChildrenNum("郭明", Entity.Lawyer , Relation.Civil));
 		ins.logout();
 	}
 	
@@ -78,8 +78,8 @@ public class BaseDao {
 	 * @param id2
 	 * @return	返回受影响的行数
 	 */
-	public int createRelationshipTo(int id1,int id2) {
-		String sql = "start m=node({1}),n=node({2}) CREATE m-[r:Related_to]->n";
+	public int createRelationshipTo(int id1,int id2,Relation r) {
+		String sql = "start m=node({1}),n=node({2}) CREATE m-[r:" + r + "]->n";
 		int rows = neoConn.update(sql,id1,id2);
 		return rows;
 	}
@@ -130,24 +130,6 @@ public class BaseDao {
 	
 	/*-------------------------查询节点信息--------------------------------------------*/
 	
-	/**
-	 * 获取节点位置信息
-	 * @param id
-	 * @return
-	 */
-	public Point[] getLocation(int id) {
-		String sql = "start n=node({1}) return n.location as location";
-		Map<String, Object> result = neoConn.query(sql,id);
-		
-		String locStr[] = result.get("location").toString().split(";");
-		Point[] location = new Point[locStr.length];
-		for (int i = 0; i < location.length; i++) {
-			String[] pos = locStr[i].split(",",2);
-			location[i] = new Point((int)Double.parseDouble(pos[0].toString()),(int)Double.parseDouble(pos[1].toString()));
-		}
-		
-		return location;
-	}
 	
 	/**
 	 * 查询id节点的name
@@ -176,7 +158,7 @@ public class BaseDao {
 	 * @return
 	 */
 	public List<Map<String, Object>> getDirectChildren(int id,Entity e ) {
-		String sql = "start n=node({1}) match n-[]->(m:" + e + ") return ID(m) as id,m.name as name order by ID(m)";
+		String sql = "start n=node({1}) match n-[]-(m:" + e + ") return ID(m) as id,m.name as name order by ID(m)";
 		List<Map<String, Object>> result = neoConn.queryList(sql,id);
 		return result;
 	}
@@ -188,21 +170,22 @@ public class BaseDao {
 	 * @return
 	 */
 	public List<Map<String, Object>> getChildren(int id,Entity e ) {
-		String sql = "start n=node({1}) match n-[*1..]->(m:" + e + ") return ID(m) as id order by ID(m)";
+		String sql = "start n=node({1}) match n-[*1..]-(m:" + e + ") return ID(m) as id order by ID(m)";
 		List<Map<String, Object>> result = neoConn.queryList(sql,id);
 		return result;
 	}
 	
-	
 	/**
-	 * 返回指定节点的直接子节点个数
-	 * @param id
+	 * 返回指定身份人的直接相连案件
+	 * @param name
+	 * @param e
+	 * @param r
 	 * @return
 	 */
-	public int getDirectChildrenNum(int id,Entity e ) {
-		String sql = "start n=node({1}) match n-[]->(m:" + e + ") return ID(m) as id";
-		List<Map<String, Object>> result = neoConn.queryList(sql,id);
-		return result.size();
+	public int getDirectChildrenNum(String name,Entity e, Relation r) {
+		String sql = "match (n:"+e+")-[r:"+r+"]-(m:Case) where n.name={1} return count(m) as count";
+		List<Map<String, Object>> result = neoConn.queryList(sql,name);
+		return (Integer) result.get(0).get("count");
 	}
 	
 	/**
@@ -211,7 +194,7 @@ public class BaseDao {
 	 * @return
 	 */
 	public int getChildrenNum(int id,Entity e ) {
-		String sql = "start n=node({1}) match n-[*1..]->(m:" + e + ") return ID(m) as id ";
+		String sql = "start n=node({1}) match n-[*1..]-(m:" + e + ") return ID(m) as id ";
 		List<Map<String, Object>> result = neoConn.queryList(sql,id);
 		return result.size();
 	}
@@ -223,7 +206,7 @@ public class BaseDao {
 	 * @return
 	 */
 	public boolean hasDirectChild(Integer id,String property) {
-		String sql = "start n=node({1}) match (n:Node)-[]->(m:Node) where m.name='" + property + "' return m.id as id";
+		String sql = "start n=node({1}) match (n:Node)-[]-(m:Node) where m.name='" + property + "' return m.id as id";
 		List<Map<String, Object>> result = neoConn.queryList(sql,id);
 		return result.size() == 0 ? false : true;
 	}
@@ -234,7 +217,7 @@ public class BaseDao {
 	 * @return
 	 */
 	public String getLeaf(Integer id) {
-		String sql = "start n=node({1}) match (n:Node)-[r:Related_to*0..]->(m:Node) return m.name as name";
+		String sql = "start n=node({1}) match (n:Node)-[r:Related_to*0..]-(m:Node) return m.name as name";
 		List<Map<String, Object>> nodes = this.getNeoConn().queryList(sql,id);
 		return nodes.get(nodes.size()-1).get("name").toString();
 	}
@@ -247,7 +230,7 @@ public class BaseDao {
 	 */
 	public List<Integer> getIdByName(int id,String name) {
 		/* order by 确保得到的子节点是最近的 */
-		String sql = "start n=node({1}) match (n:Node)-[r*0..]->(m:Node) where m.name={2} return ID(m) as id order by ID(m)";
+		String sql = "start n=node({1}) match (n:Node)-[r*0..]-(m:Node) where m.name={2} return ID(m) as id order by ID(m)";
 		
 		List<Map<String, Object>> nameList = neoConn.queryList(sql,id,name);
 		
@@ -256,6 +239,29 @@ public class BaseDao {
 			names.add( (Integer)nameList.get(i).get("id") );
 		
 		return names;
+	}
+
+	/**
+	 * 判别律师处理哪类案件比较多
+	 * @param name
+	 */
+	public void recommendLawyer(String name) {
+		Map<Relation,Integer> caseTypes = new TreeMap<Relation, Integer>();
+		for(Relation r : Relation.values()) {
+			int count = getDirectChildrenNum(name, Entity.Lawyer, r);
+			caseTypes.put(r, count);
+		}
+		//TODO　对map进行处理，则可以进行推荐
+		System.out.println("推荐" + caseTypes);
+	}
+
+	/**
+	 * 判别客户处理哪类案件比较多
+	 * @param name
+	 */
+	public void recommendClient(String name) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 	
