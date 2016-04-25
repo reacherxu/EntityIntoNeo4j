@@ -43,10 +43,9 @@ public class EntityRecognition {
 	/*
 	 * 法律文书中的声明
 	 */
-	final static String accuser_names[] = {"再审申请人","申请再审人","申诉人","上诉人","原告",
-		"原审第三人","申请人","申请复议人","申请执行人"};
+	final static String accuser_names[] = {"再审申请人","申请再审人","申诉人","上诉人","原告","原审第三人","申请人","申请复议人","申请执行人"};
 	final static String defendant_names[] = {"再审被申请人","被申请人","被申诉人","被上诉人","被告人","被告",
-		"原审被告人","原审被告","被执行人"};
+		"原审被告人","原审被告","被执行人","罪犯"};
 	final static String lawyer_names[] = {"委托代理人","诉讼代理人","代理人","辩护人","委托辩护人"};
 	final static String others[] = {"法定代表人","负责人","代理权限"};
 
@@ -61,7 +60,7 @@ public class EntityRecognition {
 		
 		BaseDao dao = new BaseDao();
 		
-		File baseDir = new File("D:\\data\\law_book");
+		File baseDir = new File("D:\\data\\law_book_guo");
 		File[] catDirs = baseDir.listFiles();
 		for (File dir : catDirs) {
 			File[] files = dir.listFiles();
@@ -69,7 +68,7 @@ public class EntityRecognition {
 			for (File file : files) {
 				//要注意构造函数使用
 				EntityRecognition er = new EntityRecognition(dao);
-//				System.out.println(file.getName() + " processing" ); 
+				System.out.println(file.getName() + " processing" ); 
 
 				er.recognize(file,charsetName);
 
@@ -138,9 +137,53 @@ public class EntityRecognition {
 	}
 
 	private Relation judgeRelation(String relation) {
-		if( relation.equals("民事"))
-			return Relation.Civil;
-		return Relation.Criminal;
+		/**
+		 * 民事案件
+		 */
+		if( relation.contains("人格权"))
+			return Relation.Civil_Personal_Right;
+		else if( relation.contains("婚姻家庭"))
+			return Relation.Civil_Marriage;
+		else if( relation.contains("合同"))
+			return Relation.Civil_Contract;
+		else if( relation.contains("知识产权"))
+			return Relation.Civil_IPR;
+		else if( relation.contains("海事海商"))
+			return Relation.Civil_Maritime;
+		
+		/**
+		 * 刑事案件
+		 */
+		else if( relation.contains("公共安全"))
+			return Relation.Criminal_Public_Safety;
+		else if( relation.contains("侵犯公民人身权利"))
+			return Relation.Criminal_Personal_Right;
+		else if( relation.contains("侵犯财产"))
+			return Relation.Criminal_Property;
+		else if( relation.contains("社会管理秩序"))
+			return Relation.Criminal_Social_Management_Order;
+		else if( relation.contains("贪污贿赂"))
+			return Relation.Criminal_Corruption;
+		else if( relation.contains("渎职"))
+			return Relation.Criminal_Malfeasance;
+		
+		/**
+		 * 行政案件
+		 */
+		else if( relation.contains("行政案件"))
+			return Relation.Administration;
+		
+		/**
+		 * 赔偿案件
+		 */
+		else if( relation.contains("赔偿案件"))
+			return Relation.Indemnity;
+		
+		/**
+		 * 执行案件
+		 */
+		else 
+			return Relation.Carry;
 	}
 
 	/**
@@ -197,7 +240,8 @@ public class EntityRecognition {
 	private boolean isAnnouncement(String line) {
 		line = line.trim().replace("　　", "").replaceAll("\\（[\u4E00-\u9FA5]+\\）", "");
 		
-		if( line.split("\\pP")[0].length() >= 25)
+		String removeToken[] = line.split("\\pP");
+		if( removeToken.length > 0 && removeToken[0].length() >= 25)
 			return false;
 		if(line.contains("一案") && line.contains("本院"))
 			return false;
@@ -235,6 +279,8 @@ public class EntityRecognition {
 
 		//根据标点分割为法律身份和名字
 		//原告被告仅仅是contains
+		if(id_name.length < 2)
+			return ;
 		String ids[] = id_name[0].split("\\pP");
 		String name[] = id_name[1].split("\\pP");
 
