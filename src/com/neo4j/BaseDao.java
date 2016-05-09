@@ -242,17 +242,102 @@ public class BaseDao {
 	}
 
 	/**
+	 * 
+	 * @param r
+	 * @return
+	 */
+	public String getCaseName(Relation r) {
+		String ret = null;
+		switch (r) {
+		/**
+		 * 民事案件
+		 */
+		case Civil_Personal_Right:
+			ret = "人格权纠纷";
+			break;
+		case Civil_Marriage:
+			ret = "婚姻家庭纠纷";
+			break;
+		case Civil_Contract:
+			ret = "合同纠纷";
+			break;
+		case Civil_IPR:
+			ret = "知识产权纠纷";
+			break;
+		case Civil_Maritime:
+			ret = "海事海商纠纷";
+			break;
+			
+			
+			/**
+			 * 刑事案件
+			 */
+		case Criminal_Public_Safety:
+			ret = "危害公共安全";
+			break;
+		case Criminal_Personal_Right:
+			ret = "侵犯公民人身权利";
+			break;
+		case Criminal_Property:
+			ret = "侵犯财产";
+			break;
+		case Criminal_Social_Management_Order:
+			ret = "妨害社会管理秩序";
+			break;
+		case Criminal_Corruption:
+			ret = "贪污贿赂";
+			break;
+		case Criminal_Malfeasance:
+			ret = "渎职";
+			break;
+			
+			/**
+			 * 行政案件
+			 */
+		case Administration:
+			ret = "行政";
+			break;
+		case Indemnity:
+			ret = "赔偿";
+			break;
+		case Carry:
+			ret = "执行";
+			break;
+	
+		}
+		return ret;
+	}
+	
+	/**
 	 * 判别律师处理哪类案件比较多
 	 * @param name
 	 */
 	public void recommendLawyer(String name) {
 		Map<Relation,Integer> caseTypes = new TreeMap<Relation, Integer>();
+		int max_count = 0;
+		Relation max_count_r = null;
+		
 		for(Relation r : Relation.values()) {
 			int count = getDirectChildrenNum(name, Entity.Lawyer, r);
-			caseTypes.put(r, count);
+			
+			if(max_count < count) {
+				max_count = count;
+				max_count_r = r;
+			}
+			
+			if(count != 0)
+				caseTypes.put(r, count);
 		}
+		
 		//TODO　对map进行处理，则可以进行推荐
-		System.out.println("推荐" + caseTypes);
+		System.out.println("\n\n");
+		System.out.println("律师" + name + "经历如下：" );
+		for(Map.Entry<Relation,Integer> entry : caseTypes.entrySet()) {
+			int cases = entry.getValue();
+			if( cases != 0 )
+				System.out.println("处理"+getCaseName(entry.getKey())+"案件"+cases+"起");
+		}
+		System.out.println("在"+getCaseName(max_count_r)+"案件上推荐律师"+name);
 	}
 
 	/**

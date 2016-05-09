@@ -60,7 +60,7 @@ public class EntityRecognition {
 		
 		BaseDao dao = new BaseDao();
 		
-		File baseDir = new File("D:\\data\\law_book_guo");
+		/*File baseDir = new File("D:\\data\\law_book_guo");
 		File[] catDirs = baseDir.listFiles();
 		for (File dir : catDirs) {
 			File[] files = dir.listFiles();
@@ -79,8 +79,10 @@ public class EntityRecognition {
 //				System.out.println("defendant:" + er.defendant);
 //				System.out.println("----------------------------------------------------------");
 			}
-		}
+		}*/
 
+		EntityRecognition er = new EntityRecognition(dao);
+		er.recommend("郭明", Entity.Lawyer);
 		dao.logout();
 
 	}
